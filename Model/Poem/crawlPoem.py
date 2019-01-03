@@ -3,13 +3,13 @@ from bs4 import BeautifulSoup
 import json
 import os
 import re
-from Data.utils.utils import deco
-from Data.utils.WebProxyTools import WebProxyTool
+from Model.utils.WebProxyTools import WebProxyTool
 class poemSpider:
-    def __init__(self,base_url,dir_to_save, website_to_crawl = None):
+    def __init__(self,base_url,dir_to_save,base_dir_for_save = None, website_to_crawl = None):
         self.website_to_crawl = website_to_crawl
         self.base_url = base_url
         self.dir_to_save = dir_to_save
+        self.base_dir_for_save = base_dir_for_save
         self.num_poems = 0
         self.poems = []
         self.url_crawled = []
@@ -54,14 +54,14 @@ class poemSpider:
             raise print(f'[log] no dir to save {self.website_to_crawl}')
         if dir_to_save is not None:
             with open(dir_to_save,'w',encoding="utf8") as fout:
-                json.dump(self.poems,fout)
+                json.dump(self.poems,fout,ensure_ascii=False)
         if self.dir_to_save is not None and self.dir_to_save != dir_to_save:
             with open(self.dir_to_save,"w",encoding="utf8") as fout:
-                json.dump(self.poems,fout)
+                json.dump(self.poems,fout,ensure_ascii=False)
 
 class poemSanwenji(poemSpider):
-    def __init__(self , base_url, dir_to_save='sanwenji/sanwenji.json',kind_url=None,base_name=None, website_to_crawl ='散文集网' ):
-        super(poemSanwenji,self).__init__(base_url, dir_to_save,website_to_crawl = website_to_crawl)
+    def __init__(self , base_url, dir_to_save=os.path.join(r'E:\\PycharmProjects\\FirstDayOnMS2\\Data\\Poem','sanwenji/sanwenji.json'),base_dir_for_save = r'E:\\PycharmProjects\\FirstDayOnMS2\\Data\\Poem',kind_url=None,base_name=None, website_to_crawl ='散文集网' ):
+        super(poemSanwenji,self).__init__(base_url, dir_to_save, base_dir_for_save ,website_to_crawl = website_to_crawl)
 
     def getPage(self,href):
         req = requests.get(url=href)
@@ -105,8 +105,6 @@ class poemSanwenji(poemSpider):
         pre = base_url
         # pre = "http://www.sanwenji.cn/sanwen/sanwen/shanggan/list_"
         post = ".html"
-        if not os.path.exists(save_dir_base):
-            os.makedirs(save_dir_base)
         for number in range(1, 20):
             print("number = ", number)
             url = pre + str(number) + post
@@ -132,9 +130,15 @@ class poemSanwenji(poemSpider):
                              'website_name':self.website_to_crawl
                              }
                 self.poems.append(temp_dict)
+
                 '''
                 下面是将这篇散文保存到一个文件的逻辑
                 '''
+                if self.base_dir_for_save:
+                    save_dir_base = os.path.join(self.base_dir_for_save,save_dir_base)
+                if not os.path.exists(save_dir_base):
+                    os.makedirs(save_dir_base)
+                print("save_dir_base",save_dir_base)
                 filename = save_dir_base + str(number) + "__" + str(i)
                 print("filename = ", filename)
                 with open(filename + ".txt", "w", encoding="utf8") as fout:
@@ -142,16 +146,6 @@ class poemSanwenji(poemSpider):
                 # with open(filename + '.pkl', "wb") as fout:
                 #     pickle.dump(onePoem, fout)
                 #     fout.close()
-
-    def save(self,dir_to_save=None):
-        if self.dir_to_save is None and dir_to_save is None:
-            raise print(f'[log] no dir to save {self.website_to_crawl}')
-        if dir_to_save is not None:
-            with open(dir_to_save,'w',encoding="utf8") as fout:
-                json.dump(self.poems,fout,ensure_ascii=False)
-        if self.dir_to_save is not None and self.dir_to_save != dir_to_save:
-            with open(self.dir_to_save,"w",encoding="utf8") as fout:
-                json.dump(self.poems,fout,ensure_ascii=False)
 
     def forward(self):
         self.kind_url = [
@@ -178,8 +172,8 @@ class poemSanwenji(poemSpider):
         self.save(self.dir_to_save)
 
 class poemChinaSw(poemSpider):
-    def __init__(self , base_url=None, dir_to_save='chinasw/chinasw.json',website_to_crawl = '中国散文网'):
-        super(poemChinaSw,self).__init__(base_url, dir_to_save,website_to_crawl = website_to_crawl)
+    def __init__(self , base_url=None, dir_to_save=os.path.join(r'E:\\PycharmProjects\\FirstDayOnMS2\\Data\\Poem','chinasw/chinasw.json'),base_dir_for_save = r'E:\\PycharmProjects\\FirstDayOnMS2\\Data\\Poem',website_to_crawl = '中国散文网'):
+        super(poemChinaSw,self).__init__(base_url, dir_to_save,base_dir_for_save,website_to_crawl = website_to_crawl)
         self.tool = WebProxyTool() #中国散文网有反扒机制
         self.crawled_list = []
         self.duplicate_num = 0
@@ -227,8 +221,6 @@ class poemChinaSw(poemSpider):
     def getOneKindPoem(self,base_url, save_dir_base,cur_poem_class):
         pre = base_url + "list_"
         post = ".html"
-        if not os.path.exists(save_dir_base):
-            os.makedirs(save_dir_base)
         # for number in range(20,100):
         for number in range(1, 20):
             print("number = ", number)
@@ -262,6 +254,11 @@ class poemChinaSw(poemSpider):
                 '''
                 下面是将这篇散文保存到一个文件夹的逻辑
                 '''
+                if self.base_dir_for_save:
+                    save_dir_base = os.path.join(self.base_dir_for_save, save_dir_base)
+                if not os.path.exists(save_dir_base):
+                    os.makedirs(save_dir_base)
+                print("save_dir_base", save_dir_base)
                 filename = save_dir_base + str(number) + "__" + str(i)
                 print("filename = ", filename)
                 with open(filename + ".txt", "w", encoding="utf8") as fout:
@@ -308,6 +305,7 @@ class poemChinaSw(poemSpider):
             except:
                 print("u = ",u)
                 print("n = ",n)
+        print("breaked")
         self.save()
 
 
@@ -317,6 +315,6 @@ if __name__ == "__main__":
     # goon = input("go on? [Y/N]")
     # if not( goon.lower() == "y" or goon.lower() == "yes" ):
     #     exit(90)
-    poemSpiderOnchinasw = poemChinaSw(base_url="http://www.sanwen.com/sanwen/jingdiansanwen/")
-    poemSpiderOnchinasw.forward()
+    # poemSpiderOnchinasw = poemChinaSw(base_url="http://www.sanwen.com/sanwen/jingdiansanwen/")
+    # poemSpiderOnchinasw.forward()
 
