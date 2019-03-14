@@ -179,6 +179,7 @@ class PoemCleaner:
         return poem.strip()
 
     def PostWashOff(self):
+        new_poems = []
         for i, temp_dict in enumerate(self.poems):
             new_para = []
             for para_dict in temp_dict['paras']:
@@ -192,9 +193,9 @@ class PoemCleaner:
                 para_dict['para_content'] = inner_temp
                 new_para.append(para_dict)
             temp_dict['paras'] = new_para
-            self.poems[i] = temp_dict
-
-
+            if len(temp_dict['paras']) > 0:
+                new_poems.append(temp_dict)
+        self.poems = new_poems
 
     def ProcessPoemClass(self):
         '''
@@ -265,7 +266,6 @@ class PoemCleaner:
         self.poems = new_poems
         json.dump(self.para_string,open(os.path.join(r'E:\\PycharmProjects\\FirstDayOnMS2\\Data\\Poem',"para_string.json"),"w",encoding="utf-8"),ensure_ascii=False)
         json.dump(self.poems,open(os.path.join(r'E:\\PycharmProjects\\FirstDayOnMS2\\Data\\Poem',"REM_poem.json"),"w",encoding="utf-8"),ensure_ascii=False)
-
 
     def CheckTimingSig(self):
         '''
@@ -357,8 +357,6 @@ class PoemCleaner:
                     new_paras.append(para_dict)
             poem_dict['paras'] = new_paras
 
-
-
     def ExtractKeyWord(self):
         for i , poem_dict in enumerate(self.poems):
             new_paras = []
@@ -392,64 +390,46 @@ class PoemCleaner:
         else:
             raise ValueError("load dir not exists")
 
-    def CountDupPoemID(self):
-        dup_num = 0
-        poem_ids = []
+    def CountZero(self):
+        num = 0
         for poem_dict in self.poems:
-            poem_id = poem_dict["poem_id"]
-            if poem_id not in poem_ids:
-                poem_ids.append(poem_id)
-            else:
-                dup_num +=1
-        print("dup_num = ",dup_num)
+            if len(poem_dict['paras']) == 0:
+                print(poem_dict)
+                num+=1
+        print("num = ",num)
 
     def forward(self,dir_to_save = None):
-        # print("1 = ",len(self.poems))
-        # self.CountDupPoemID()
-        # self.WashOff()
-        # print("washOff = ",len(self.poems))
-        # self.CountDupPoemID()
-        #
-        # self.PoemSplit()
-        # print("split = ",len(self.poems))
-        # self.CountDupPoemID()
-        #
-        # self.PostWashOff()
-        # print("postWash = ",len(self.poems))
-        # self.CountDupPoemID()
-        #
-        # self.ProcessPoemClass()
-        # print("PoemClass = ",len(self.poems))
-        # self.CountDupPoemID()
-        #
-        # self.Fenci()
-        # print("Fenci = ",len(self.poems))
-        # self.CountDupPoemID()
-        # self.save(dir_to_save)
-        self.load(dir_to_save)
+        print("1 = ",len(self.poems))
+        self.WashOff()
+        print("washOff = ",len(self.poems))
+
+        self.PoemSplit()
+        print("split = ",len(self.poems))
+
+        self.PostWashOff()
+        print("postWash = ",len(self.poems))
+
+
+        self.ProcessPoemClass()
+        print("PoemClass = ",len(self.poems))
+
+        self.CountZero()
+
+        self.Fenci()
+        print("Fenci = ",len(self.poems))
+
         self.RemoveDuplicate()
         print("RD = ",len(self.poems))
 
-        # print("BCT = ",len(self.poems))
-        #
-        # self.CheckTimingSig()
-        # print("CT = ",len(self.poems))
-        #
-        # # self.CheckCharacter() #不再需要过滤人设
-        # self.ExtractKeyWord()
-        # print("EK = ",len(self.poems))
-        #
-        # self.save(dir_to_save+".json")
-        # print("1 = ",len(self.poems))
+        self.CheckTimingSig()
+        print("CT = ",len(self.poems))
 
-        # for poem in self.poems:
-        #     if poem["poem_title"] == "幸福的理由":
-        #         print(poem)
-        #         paras = poem['paras']
-        #         for p in paras:
-        #             print("p = ", p)
-        #         exit(89)
-        # exit(78)
+        # self.CheckCharacter() #不再需要过滤人设
+        self.ExtractKeyWord()
+        print("EK = ",len(self.poems))
+
+        self.save(dir_to_save+".json")
+
 
 
 
