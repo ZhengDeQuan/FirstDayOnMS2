@@ -1,0 +1,33 @@
+{
+	"query":{
+			"nested":{
+			"path":"tags",
+			"query":{
+				"bool":{
+					"must":[
+							{
+								"exists":{
+									"field":"tags"
+								}
+							}
+						]
+				}
+			}
+		}
+	},
+	"_source": [ "album_info", "lyric","music_id","music_name","singer_info","tags" ]
+
+}
+
+
+
+
+{
+	"query":{
+		"exists":{
+			"field":"lyric"
+		}
+	},
+	"_source": [ "album_info", "lyric","music_id","music_name","singer_info","tags" ]
+
+}
