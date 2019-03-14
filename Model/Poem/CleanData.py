@@ -5,12 +5,13 @@ import pickle
 import jieba
 from jieba import analyse
 from typing import List , Dict ,AnyStr
-from config import PoemClassPH, Festival, Season
+from Poem.config import PoemClassPH, Festival, Season, XiaoiceCharacterSetting
 from collections import Counter
 ParaDict = Dict[str,str]
 ParaList = List[ParaDict]
 class PoemCleaner:
     def __init__(self,poemFiles=[],dir_to_save=os.path.join(r'E:\\PycharmProjects\\FirstDayOnMS2\\Data\\Poem','processed_poem.json')):
+        super(PoemCleaner,self).__init__()
         self.poem_id_offset = 0
         self.poems = []
         self.num_poem = 0
@@ -35,19 +36,23 @@ class PoemCleaner:
         return new_poems
 
     def WashText(self,origin_poem:str)->str:
+
         origin_poem = re.sub(r'\(中国散文网www\.SanWen\.com\)', '', origin_poem)
         origin_poem = re.sub(r'（中国散文网www\.SanWen\.com）', '', origin_poem)
         origin_poem = re.sub(r'\(中国散文网www\.sanwen\.com\)', '', origin_poem)
         origin_poem = re.sub(r'（中国散文网www\.sanwen\.com）', '', origin_poem)
         origin_poem = re.sub(r'\( 文章阅读网：www\.sanwen\.com \)', "", origin_poem)
         origin_poem = re.sub(r'（ 文章阅读网：www\.sanwen\.com ）', "", origin_poem)
-        origin_poem = re.sub(r'\(.*\)', "", origin_poem)
-        origin_poem = re.sub(r'（.*）', "", origin_poem)
+        origin_poem = re.sub(r'\(中国散文网原创投稿 www\.sanwen\.com\)', "", origin_poem)
+        # origin_poem = re.sub(r'\(中国散文网.*\)', '', origin_poem)
+        # origin_poem = re.sub(r'\(.*\)', "", origin_poem)
+        # origin_poem = re.sub(r'（.*）', "", origin_poem)
         origin_poem = re.sub(r"【作者：.*】", "", origin_poem)
         origin_poem = re.sub(r'文/未名人', '', origin_poem)
         origin_poem = re.sub(r'——题记', '', origin_poem)
         origin_poem = re.sub(r'-题记', '', origin_poem)
         origin_poem = re.sub(r'——', '', origin_poem)
+
         ele = [r'【一】', r'【二】', r'【三】', r'【四】', r'【五】', r'【六】', r'【七】', r'【八】', r'【九】', r'【后记】','原诗：']
         for e in ele:
             origin_poem = re.sub(e, "", origin_poem)
@@ -70,9 +75,13 @@ class PoemCleaner:
         new_poems = []
         for i , temp_dict in enumerate( self.poems ):
             origin_poem = temp_dict['origin_poem']
+
             origin_poem = self.WashText(origin_poem)
             if len(origin_poem) != 0:
                 temp_dict['washed_poem'] = origin_poem
+                poem_title = temp_dict["poem_title"]
+                # if poem_title != "幸福的理由":
+                #     continue
                 new_poems.append(temp_dict)
         self.poems = new_poems
 
@@ -158,9 +167,10 @@ class PoemCleaner:
                         for ele in one_para['para_content']:
                             new_paras.append(ele)
                 return [{'para_title':"","para_content":new_paras}]
-
         for i in range(len(paras) - 1):
             paras[i]['para_content'] = paras[i+1]['para_content']
+        if len(paras) >=2:
+            paras.pop(-1)
         return paras
 
     def RemoveSpecificChars(self, poem :str = "" ,chars_to_remove : List[str] = [r'【',r'】'])->str:
@@ -184,24 +194,7 @@ class PoemCleaner:
             temp_dict['paras'] = new_para
             self.poems[i] = temp_dict
 
-    def RemoveDuplicate(self):
-        self.poem_string = []
-        new_poems = []
-        new_poem_id = 0
-        for poem_dict in self.poems:
-            poem_id = poem_dict["poem_id"]
-            poem_content = []
-            for para_dict in poem_dict['paras']:
-                temp = [''.join(para_content) for para_content in para_dict['fencied_para_content']]
-                temp = ''.join(temp)
-                poem_content.append(temp)
-            poem_content = ''.join(poem_content)
-            if poem_content not in self.poem_string:
-                self.poem_string.append(poem_content)
-                poem_dict['poem_id'] = new_poem_id
-                new_poem_id += 1
-                new_poems.append(poem_dict)
-        self.poems = new_poems
+
 
     def ProcessPoemClass(self):
         '''
@@ -220,8 +213,6 @@ class PoemCleaner:
     如果之后的函数调用时，没有看到这个字段，那么就调用self.Fenci()这个函数
     '''
     def Fenci(self):
-        if 'fencied_paras' in self.poems[0]:
-            return
         for i,poem_dict in enumerate( self.poems ):
             new_paras = []
             for para_dict in poem_dict['paras']:
@@ -236,6 +227,45 @@ class PoemCleaner:
                     para_dict['fencied_para_content'].append(fencied_para_c)
                 new_paras.append(para_dict)
             self.poems[i]['paras'] = new_paras
+
+    def RemoveDuplicate(self):
+        self.poem_string = []
+        self.para_string = []
+        new_poems = []
+        new_poem_id = 0
+        dup_poem = 0
+        temp_dup_dict = {}
+        for poem_dict in self.poems:
+            poem_id = poem_dict["poem_id"]
+            print("poem_id = ",poem_id)
+            poem_content = []
+            List_of_para_dict = []
+            for para_dict in poem_dict['paras']:
+                temp = [''.join(para_content) for para_content in para_dict['fencied_para_content']]
+                temp = ''.join(temp)
+                if temp not in self.para_string:
+                    self.para_string.append(temp)
+                    poem_content.append(temp)
+                    List_of_para_dict.append(para_dict)
+            poem_dict['paras'] = List_of_para_dict
+            poem_content = ''.join(poem_content)
+            if poem_content not in self.poem_string:
+                temp_dup_dict[poem_content] = poem_dict
+                self.poem_string.append(poem_content)
+                poem_dict['poem_id'] = new_poem_id
+                new_poem_id += 1
+                new_poems.append(poem_dict)
+            else:
+                dup_poem += 1
+                print("poem_content = ",poem_content)
+                print("now    = ",poem_dict)
+                print("before = ",temp_dup_dict[poem_content])
+        print("dup_poem = ",dup_poem)
+
+        self.poems = new_poems
+        json.dump(self.para_string,open(os.path.join(r'E:\\PycharmProjects\\FirstDayOnMS2\\Data\\Poem',"para_string.json"),"w",encoding="utf-8"),ensure_ascii=False)
+        json.dump(self.poems,open(os.path.join(r'E:\\PycharmProjects\\FirstDayOnMS2\\Data\\Poem',"REM_poem.json"),"w",encoding="utf-8"),ensure_ascii=False)
+
 
     def CheckTimingSig(self):
         '''
@@ -306,6 +336,29 @@ class PoemCleaner:
                 poem_dict['festival'].extend(festival)
             self.poems[i] = poem_dict
 
+    def CheckCharacter(self):
+        '''
+        检查不符合小冰人设的散文，小冰的人设是18岁少女
+        :return:
+        '''
+        forbidden = XiaoiceCharacterSetting.forbidden_keywords
+        for poem_dict in self.poems:
+            new_paras = []
+            for para_dict in poem_dict['paras']:
+                flag_has_forbidden = False
+                for para_content in para_dict['fencied_para_content']:
+                    for word in para_content:
+                        if word in forbidden:
+                            flag_has_forbidden = True
+                            break
+                    if flag_has_forbidden:
+                        break
+                if not flag_has_forbidden:
+                    new_paras.append(para_dict)
+            poem_dict['paras'] = new_paras
+
+
+
     def ExtractKeyWord(self):
         for i , poem_dict in enumerate(self.poems):
             new_paras = []
@@ -339,27 +392,73 @@ class PoemCleaner:
         else:
             raise ValueError("load dir not exists")
 
+    def CountDupPoemID(self):
+        dup_num = 0
+        poem_ids = []
+        for poem_dict in self.poems:
+            poem_id = poem_dict["poem_id"]
+            if poem_id not in poem_ids:
+                poem_ids.append(poem_id)
+            else:
+                dup_num +=1
+        print("dup_num = ",dup_num)
 
-    def forward(self):
-        self.WashOff()
-        self.PoemSplit()
-        self.PostWashOff()
-        self.ProcessPoemClass()
-        self.Fenci()
+    def forward(self,dir_to_save = None):
+        # print("1 = ",len(self.poems))
+        # self.CountDupPoemID()
+        # self.WashOff()
+        # print("washOff = ",len(self.poems))
+        # self.CountDupPoemID()
+        #
+        # self.PoemSplit()
+        # print("split = ",len(self.poems))
+        # self.CountDupPoemID()
+        #
+        # self.PostWashOff()
+        # print("postWash = ",len(self.poems))
+        # self.CountDupPoemID()
+        #
+        # self.ProcessPoemClass()
+        # print("PoemClass = ",len(self.poems))
+        # self.CountDupPoemID()
+        #
+        # self.Fenci()
+        # print("Fenci = ",len(self.poems))
+        # self.CountDupPoemID()
+        # self.save(dir_to_save)
+        self.load(dir_to_save)
         self.RemoveDuplicate()
-        # self.save()
+        print("RD = ",len(self.poems))
+
+        # print("BCT = ",len(self.poems))
         #
-        # self.load()
-        self.CheckTimingSig()
-        # self.save()
+        # self.CheckTimingSig()
+        # print("CT = ",len(self.poems))
         #
-        # self.load()
-        self.ExtractKeyWord()
-        self.save()
+        # # self.CheckCharacter() #不再需要过滤人设
+        # self.ExtractKeyWord()
+        # print("EK = ",len(self.poems))
+        #
+        # self.save(dir_to_save+".json")
+        # print("1 = ",len(self.poems))
+
+        # for poem in self.poems:
+        #     if poem["poem_title"] == "幸福的理由":
+        #         print(poem)
+        #         paras = poem['paras']
+        #         for p in paras:
+        #             print("p = ", p)
+        #         exit(89)
+        # exit(78)
+
 
 
 
 
 if __name__ == "__main__":
     poemcleaner = PoemCleaner([os.path.join(r'E:\\PycharmProjects\\FirstDayOnMS2\\Data\\Poem','sanwenji/sanwenji.json'),os.path.join(r'E:\\PycharmProjects\\FirstDayOnMS2\\Data\\Poem','chinasw/chinasw.json')])
-    poemcleaner.forward()
+    poemcleaner.forward(os.path.join(r'E:\\PycharmProjects\\FirstDayOnMS2\\Data\\Poem','processed_poem_2019.json'))
+    # poemcleaner = PoemCleaner(
+    #     [os.path.join(r'E:\\PycharmProjects\\FirstDayOnMS2\\Data\\Poem', 'sanwenji/sanwenji.json')]
+    # )
+    # poemcleaner.forward()

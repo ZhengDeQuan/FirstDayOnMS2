@@ -1,8 +1,11 @@
+#~/Data/Poem/processed_poem.json
+
 poems = [A,….A]
 
 A  = poem_dict
 
 poem_dict ={
+"poem_id": int_type
 "poem_title":str_type 
 "origin_poem":str_type
 "url":str_type

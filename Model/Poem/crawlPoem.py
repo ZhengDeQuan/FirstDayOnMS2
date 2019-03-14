@@ -4,6 +4,7 @@ import json
 import os
 import re
 from Model.utils.WebProxyTools import WebProxyTool
+
 class poemSpider:
     def __init__(self,base_url,dir_to_save,base_dir_for_save = None, website_to_crawl = None):
         self.website_to_crawl = website_to_crawl
@@ -308,10 +309,30 @@ class poemChinaSw(poemSpider):
         print("breaked")
         self.save()
 
+class poemDusanwen(poemSpider):
+    def __init__(self , base_url=None, dir_to_save=os.path.join(r'E:\\PycharmProjects\\FirstDayOnMS2\\Data\\Poem','dusanwen/dusanwen.json'),base_dir_for_save = r'E:\\PycharmProjects\\FirstDayOnMS2\\Data\\Poem',website_to_crawl = '文章阅读网'):
+        super(poemDusanwen,self).__init__(base_url, dir_to_save,base_dir_for_save,website_to_crawl = website_to_crawl)
+        self.tool = WebProxyTool() #中国散文网有反扒机制
+        self.crawled_list = []
+        self.duplicate_num = 0
+
+    def makePoemObject(self, main_class, sub_class, href, page_title, Jokes):
+        New_Jokes = []
+        for joke in Jokes:
+            joke = [re.sub(r'\(.*\)|（.*）', '', ele) for ele in joke]
+            joke = [re.sub(r'^(0|1|2|3|4|5|6|7|8|9|0)',"",ele) for ele in joke]
+
+            one_joke = {
+                'main_class':main_class,'sub_class':sub_class,
+                'url': href, 'page_title': page_title, "content": joke
+            }
+            New_Jokes.append(one_joke)
+        return New_Jokes
 
 if __name__ == "__main__":
-    spiderOnsanwenji= poemSanwenji(base_url=None)
-    spiderOnsanwenji.forward()
+    pass
+    # spiderOnsanwenji= poemSanwenji(base_url=None)
+    # spiderOnsanwenji.forward()
     # goon = input("go on? [Y/N]")
     # if not( goon.lower() == "y" or goon.lower() == "yes" ):
     #     exit(90)

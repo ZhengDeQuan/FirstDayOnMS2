@@ -39,6 +39,22 @@ class Season:
             '春天','夏天','秋天','冬天'
         ]
 
+
+class XiaoiceCharacterSetting:
+    forbidden_keywords = [
+        '女儿', '儿子', '侄子', '侄女',
+        '丈夫', '妻子',
+        '结婚', '离婚', '离异',
+    ]
+    def __init__(self):
+        '''
+        小冰的人物设定是18岁的少女，所以可以有妈妈，爸爸，但是不能有女儿，儿子，这些不能有的情况，通过关键词来过滤
+        '''
+        # self.forbidden_keywords = [
+        #     '女儿','儿子','侄子','侄女',
+        #     '丈夫','妻子',
+        #     '结婚','离婚','离异',
+        # ]
 if __name__ == "__main__":
     A = PoemClassPH()
 
