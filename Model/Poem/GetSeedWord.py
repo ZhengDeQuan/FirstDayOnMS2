@@ -11,6 +11,7 @@ import os
 import json
 import openpyxl
 import random
+import pickle
 import jieba
 from jieba import analyse
 from Model.Poem.config import opt
@@ -86,6 +87,7 @@ class GetSeedWord:
             self.prosePastSelected |= self.loadProseNumber(path=proseSelcted)
 
         self.poems = self.getProse(prose_path)
+        #self.poems = pickle.load(open("poems.pkl","rb"))
         print("散文加载成功")
 
         self.proseCurrentSelected = set() #用当前这些关键词检索出来的文章
@@ -123,16 +125,16 @@ class GetSeedWord:
             wb.create_sheet(sheet_name)
             sheet = wb.get_sheet_by_name(sheet_name)
             for i , (word,weight) in enumerate(seedWordTuple):
-                sheet.cell(row=i+1,column=0,value=word)
-                sheet.cell(row=i+1,column=1,value=weight)
+                sheet.cell(row=i+1,column=1,value=word)
+                sheet.cell(row=i+1,column=2,value=weight)
 
         else:
             wb = openpyxl.load_workbook(path)
             sheet = wb.active
             sheet.title = '1'
             for i, (word,weight) in enumerate(seedWordTuple):
-                sheet.cell(row=i+1, column=0, value=word)
-                sheet.cell(row=i+1,column=1,value=weight)
+                sheet.cell(row=i+1,column=1, value=word)
+                sheet.cell(row=i+1,column=2,value=weight)
 
         wb.save(path)
         print("种子词写入成功！")
@@ -167,15 +169,15 @@ class GetSeedWord:
             wb.create_sheet(sheet_name)
             sheet = wb.get_sheet_by_name(sheet_name)
             for i, (poem_id,para_id) in enumerate(proseNumbers):
-                sheet.cell(row=i+1, column=0, value=poem_id)
-                sheet.cell(row=i+1, column=1, value=para_id)
+                sheet.cell(row=i+1, column=1, value=poem_id)
+                sheet.cell(row=i+1, column=2, value=para_id)
         else:
             wb = openpyxl.load_workbook(path)
             sheet = wb.active
             sheet.title = '1'
             for i, (poem_id,para_id) in enumerate(proseNumbers):
-                sheet.cell(row=i+1, column=0, value=poem_id)
-                sheet.cell(row=i+1, column=1, value=para_id)
+                sheet.cell(row=i+1, column=1, value=poem_id)
+                sheet.cell(row=i+1, column=2, value=para_id)
         wb.save(path)
         print("文章编号写入成功！")
 
@@ -189,9 +191,6 @@ class GetSeedWord:
         :return: List of Tuples :[(word , float_weight) ,……,() ]
         '''
         return analyse.textrank(text, topK=topK, withWeight=withWeight, allowPOS=allowPOS)
-
-
-
 
     def Select(self):
         for poem in tqdm(self.poems):
@@ -250,7 +249,10 @@ class GetSeedWord:
             self.proseCurrentSelected = set()
             self.wordCurrentSelectedDict = dict()
         print("迭代结束")
-
+        # for poem in self.poems:
+        #     for para in poem["paras"]:
+        #         print(para['temp_key_words'])
+        pickle.dump(self.poems,open("poems.pkl","wb"))
 
 
 
