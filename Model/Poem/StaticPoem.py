@@ -122,6 +122,6 @@ if __name__ == "__main__":
     print("path  = ",path)
     prose_path = os.path.join(path, "Data\\Poem\\processed_poem_2019.json")
     S = StaticPoem(prose_path = os.path.join(path, "Data\\Poem\\processed_poem_2019.json"),
-                   save_path="poems.xlsx")
+                   save_path="poemsClassStatic.xlsx")
     S.static()
     S.Write2xlsx()
