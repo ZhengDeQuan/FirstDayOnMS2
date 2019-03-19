@@ -3,7 +3,7 @@ import os
 from Poem.crawlPoem import poemSanwenji , poemChinaSw
 from Song.crawlSong import songSpider
 from Song.crawlSong import MergeSongComment
-from Poem_Song.PoemSongMatching import MatchPoemSong,MatchSeggedPoemSong
+from Poem_Song.PoemSongMatching import MatchPoemSong,MatchSeggedPoemSong,PoemMatchSong
 from Poem_Song.config import opt
 
 from Poem.CleanData import PoemCleaner
@@ -35,19 +35,19 @@ if __name__ == "__main__":
     #
     # Loading dataset
     #
-    documents = get_each_document(os.path.join(prefix_path,'Data/Poem/processed_poem_2019.json'))
-    engine = SegmentationEngine(n_topics=100, max_iter=70, a=0.1, b=0.01,
-                                m=0.5)  # lda有两种训练方式，batch是默认的，更快，将所有数据导入内存训练；online，更慢，将数据分批导入内存训练
-    print("the length of the documents = ", len(documents))
-    X_train = documents
-    X_test = documents
-    # Input: SENTENCE
-    print('SENTENCE')
-    engine.fit(X_train, input_type='sentence')
-    engine.pickle_lda("topicTilingWeights")
-    engine.get_pickled_lda("topicTilingWeights")
-    Res = engine.predict(X_test)
-    WriteBackToPoem(os.path.join(prefix_path,'Data\\Poem\\processed_poem_2019.json'),Res,os.path.join(prefix_path,'Data\\Poem\\seged_poem_2019.json'))
+    # documents = get_each_document(os.path.join(prefix_path,'Data/Poem/processed_poem_2019.json'))
+    # engine = SegmentationEngine(n_topics=100, max_iter=70, a=0.1, b=0.01,
+    #                             m=0.5)  # lda有两种训练方式，batch是默认的，更快，将所有数据导入内存训练；online，更慢，将数据分批导入内存训练
+    # print("the length of the documents = ", len(documents))
+    # X_train = documents
+    # X_test = documents
+    # # Input: SENTENCE
+    # print('SENTENCE')
+    # engine.fit(X_train, input_type='sentence')
+    # engine.pickle_lda("topicTilingWeights")
+    # engine.get_pickled_lda("topicTilingWeights")
+    # Res = engine.predict(X_test)
+    # WriteBackToPoem(os.path.join(prefix_path,'Data\\Poem\\processed_poem_2019.json'),Res,os.path.join(prefix_path,'Data\\Poem\\seged_poem_2019.json'))
 
     # 歌曲的部分
     # songClawer = songSpider()
@@ -65,3 +65,10 @@ if __name__ == "__main__":
     #                                         out_file=os.path.join(prefix_path,'Data\\Poem_Song\\seggedProseSong.txt'),
     #                                         keywords=['夜晚', '深夜', '寂静', '安眠', '星空', '平静', '喧嚣', '静', '夜色', '月亮', "失眠"])
     # poem_song_matcher.forward()
+    poem_match_song = PoemMatchSong(opt=opt,
+                                    poem_file=os.path.join(prefix_path,"Data\\Poem\\seged_poem_2019.json"),
+                                    song_file=os.path.join(prefix_path,"Data\\Song\\song6.pkl"),
+                                    out_file=os.path.join(prefix_path,'Data\\Poem_Song\\seggedProseSong.txt'),
+                                    keywords=['夜晚', '深夜', '寂静', '安眠', '星空', '平静', '喧嚣', '静', '夜色', '月亮', "失眠"],
+                                    idf_path = "idf.txt",
+                                    additional_key_words_path = "Poem/poemsClassStatic.xlsx")
