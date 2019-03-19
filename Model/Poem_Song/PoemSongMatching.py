@@ -44,7 +44,7 @@ class MatchPoemSong:
         '''
         festival_count = Counter(para_dict['festival'])
         season_count = Counter(para_dict['season'])
-        to_be_test = Counter(dict(para_dict['key_words']))
+        to_be_test = Counter(dict(para_dict['idf_key_words']))
 
         res1 = to_be_test & self.keywords_count
         res2 = festival_count & self.keywords_count
@@ -87,8 +87,8 @@ class MatchPoemSong:
         self.sub_poems.sort(key=lambda poem: poem['match_score_with_topic'], reverse=True)
 
     def getKeyWordFromText(self,text):
-        res = analyse.textrank(text, topK=10, withWeight=True, allowPOS=('ns', 'n', 'vn'))
-        # res = analyse.textrank(text, topK=10, withWeight=True, allowPOS=('ns', 'n', 'vn', 'v'))
+        #res = analyse.textrank(text, topK=10, withWeight=True, allowPOS=('ns', 'n', 'vn','v'))
+        res = analyse.extract_tags(text, topK=10, withWeight=True, allowPOS=('ns', 'n', 'vn', 'v'))
         return res
 
     def filterSong(self, key_words, text, threshold=None):
@@ -407,9 +407,6 @@ class MatchPoemSong:
         for one_prose in sub_poems:
             one_prose['content'] = ''.join(one_prose['content'].split())
         json.dump(sub_poems,open(out_path,"w",encoding="utf-8"),ensure_ascii=False)
-
-
-
 
     def save(self):
         pass

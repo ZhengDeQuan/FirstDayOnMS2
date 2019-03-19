@@ -270,7 +270,6 @@ class Document2:
         segments.append(' '.join(self.sentences[self.boundaries[-1]:]))
         return segments
 
-
 class Document:
     """
     Document represents one document.
@@ -352,11 +351,9 @@ class Document:
         segments.append(' '.join(self.sentences[self.boundaries[-1]:]))
         return segments
 
-
 #
 #Topic Tiling class
 #
-
 
 class TopicTiling:
     """
@@ -589,7 +586,6 @@ def get_each_document(path):
                 if len(documents) >= 2000 :#测试时为了快速
                     return documents
     return documents
-
 
 def WriteBackToPoem(path, Res , out_path):
     index = 0

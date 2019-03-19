@@ -7,15 +7,19 @@ from jieba import analyse
 from typing import List , Dict ,AnyStr
 from Poem.config import PoemClassPH, Festival, Season, XiaoiceCharacterSetting
 from collections import Counter
+
 ParaDict = Dict[str,str]
 ParaList = List[ParaDict]
 class PoemCleaner:
-    def __init__(self,poemFiles=[],dir_to_save=os.path.join(r'E:\\PycharmProjects\\FirstDayOnMS2\\Data\\Poem','processed_poem.json')):
+    def __init__(self,poemFiles=[],
+                 dir_to_save=os.path.join(r'E:\\PycharmProjects\\FirstDayOnMS2\\Data\\Poem','processed_poem.json'),
+                 idf_path=None):
         super(PoemCleaner,self).__init__()
         self.poem_id_offset = 0
         self.poems = []
         self.num_poem = 0
         self.dir_to_save = dir_to_save
+        self.idf_path = idf_path
         for poemfile in poemFiles:
             with open(poemfile,"r",encoding='utf8') as fin:
                 poems = json.load(fin)
@@ -358,12 +362,16 @@ class PoemCleaner:
             poem_dict['paras'] = new_paras
 
     def ExtractKeyWord(self):
+        if self.idf_path is not None:
+            analyse.set_idf_path(self.idf_path)
         for i , poem_dict in enumerate(self.poems):
             new_paras = []
             for j,para_dict in enumerate(poem_dict['paras']):
                 all_content = '\n'.join(para_dict['para_content'])
-                key_words = analyse.textrank(all_content, topK=10, withWeight=True, allowPOS=('ns', 'n', 'vn'))#'v' #ns地名；n名词；vn名动词，比如思索；v动词
-                para_dict['key_words'] = key_words
+                key_words = analyse.textrank(all_content, topK=10, withWeight=True, allowPOS=('ns', 'n', 'vn','v'))#'v' #ns地名；n名词；vn名动词，比如思索；v动词
+                idf_key_words = analyse.extract_tags(all_content, topK=10, withWeight=True, allowPOS=('ns', 'n', 'vn','v'))#'v' #ns地名；n名词；vn名动词，比如思索；v动词
+                para_dict['key_words'] = key_words #with the type of List [Tuples('word',float)]
+                para_dict['idf_key_words'] = idf_key_words
                 new_paras.append(para_dict)
             self.poems[i]['paras'] = new_paras
 
@@ -398,7 +406,7 @@ class PoemCleaner:
                 num+=1
         print("num = ",num)
 
-    def forward(self,dir_to_save = None):
+    def forward(self,dir_to_save = None,idf_path=None):
         print("1 = ",len(self.poems))
         self.WashOff()
         print("washOff = ",len(self.poems))
@@ -428,7 +436,7 @@ class PoemCleaner:
         self.ExtractKeyWord()
         print("EK = ",len(self.poems))
 
-        self.save(dir_to_save+".json")
+        self.save(dir_to_save)
 
 
 
@@ -436,7 +444,9 @@ class PoemCleaner:
 
 
 if __name__ == "__main__":
-    poemcleaner = PoemCleaner([os.path.join(r'E:\\PycharmProjects\\FirstDayOnMS2\\Data\\Poem','sanwenji/sanwenji.json'),os.path.join(r'E:\\PycharmProjects\\FirstDayOnMS2\\Data\\Poem','chinasw/chinasw.json')])
+    poemcleaner = PoemCleaner([os.path.join(r'E:\\PycharmProjects\\FirstDayOnMS2\\Data\\Poem','sanwenji/sanwenji.json'),
+                               os.path.join(r'E:\\PycharmProjects\\FirstDayOnMS2\\Data\\Poem','chinasw/chinasw.json')],
+                              idf_path="../idf.txt")
     poemcleaner.forward(os.path.join(r'E:\\PycharmProjects\\FirstDayOnMS2\\Data\\Poem','processed_poem_2019.json'))
     # poemcleaner = PoemCleaner(
     #     [os.path.join(r'E:\\PycharmProjects\\FirstDayOnMS2\\Data\\Poem', 'sanwenji/sanwenji.json')]

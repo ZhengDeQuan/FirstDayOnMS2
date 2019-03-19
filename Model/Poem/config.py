@@ -1,3 +1,8 @@
+opt = {
+    'poem_threshold':0.1,
+}
+
+
 class PoemClassPH:
     def __init__(self):
         # 散文的类型，爬取的时候散文的种类用拼音表示的，拼音转汉字

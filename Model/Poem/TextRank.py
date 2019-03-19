@@ -18,12 +18,13 @@ class TextRank(object):
         tag_filter = ['a','d','n','v']
         seg_result = pseg.cut(self.sentence)
         self.word_list = [s.word for s in seg_result if s.flag in tag_filter]
-        print(self.word_list)     #根据窗口，构建每个节点的相邻节点,返回边的集合
+        print(self.word_list)
 
+    #根据窗口，构建每个节点的相邻节点,返回边的集合
     def createNodes(self):
         tmp_list = []
         word_list_len = len(self.word_list)
-        for index, word in enumerate(self.word_list):
+        for index, word in enumerate(self.word_list):#完全有可能有相同的word，但是出现在之后啊
             if word not in self.edge_dict.keys():
                 tmp_list.append(word)
                 tmp_set = set()
