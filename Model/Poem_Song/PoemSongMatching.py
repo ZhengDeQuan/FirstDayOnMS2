@@ -9,6 +9,7 @@ import time
 import numpy as np
 from collections import Counter
 from jieba import analyse
+import openpyxl
 import gensim.models as g
 from Poem_Song.config import opt
 gensim_weight_path = 'E:\\PycharmProjects\\FirstDayOnMS2\\Data\\Poem_Song\\gensim_weight\\songpoem2vec_custom_wordvec_song.bin'
@@ -19,7 +20,8 @@ class MatchPoemSong:
     def __init__(self ,opt, poem_file:str , song_file:str , keywords:List[str] ,
                  base_dir_for_save = r'E:\\PycharmProjects\\FirstDayOnMS2\\Data\\Poem_Song',
                  save_dir_for_songVec = "songVec.pkl",
-                 save_dir_for_poemVec = "poemVec.pkl"):
+                 save_dir_for_poemVec = "poemVec.pkl",
+                 idf_path = None):
         self.poem_file = poem_file
         self.song_file = song_file
 
@@ -36,6 +38,9 @@ class MatchPoemSong:
         self.songVecs = []
         self.poemVecs = []
         self.model = g.Doc2Vec.load(gensim_weight_path)
+        self.idf_path = idf_path
+        if idf_path is not None:
+            analyse.set_idf_path(idf_path)
 
     def filterPoem(self,para_dict):
         '''
@@ -60,21 +65,17 @@ class MatchPoemSong:
         self.keywords_count = Counter(self.keywords)
         self.sub_poems = []
         for poem_dict in self.poems:
+
             poem_id = poem_dict['poem_id']
             for para_id , para_dict in enumerate(poem_dict['paras']):
                 score =  self.filterPoem(para_dict)
-                # print(self.opt['poem_threshold'])
-                # print(type(self.opt['poem_threshold']))
-                # print(str(self.opt['poem_threshold']))
-                #
-                # exit(90)
+                if poem_dict["poem_class"] in self.keywords:
+                    score += 10 + self.opt['poem_threshold']
                 if score < self.opt['poem_threshold']: #0.001
                     continue
                 content = []
                 title = para_dict['fencied_para_title']
                 title = ' '.join(title).strip()
-                # if title:
-                #     content.append(title)
                 for para_c in para_dict['fencied_para_content']:
                     content.append(' '.join(para_c))
 
@@ -87,7 +88,6 @@ class MatchPoemSong:
         self.sub_poems.sort(key=lambda poem: poem['match_score_with_topic'], reverse=True)
 
     def getKeyWordFromText(self,text):
-        #res = analyse.textrank(text, topK=10, withWeight=True, allowPOS=('ns', 'n', 'vn','v'))
         res = analyse.extract_tags(text, topK=10, withWeight=True, allowPOS=('ns', 'n', 'vn', 'v'))
         return res
 
@@ -480,7 +480,8 @@ class MatchSeggedPoemSong(MatchPoemSong):
                  save_dir_for_songVec = "songVec.pkl",
                  save_dir_for_poemVec = "poemVec.pkl"):
 
-        MatchPoemSong.__init__(self , opt , poem_file , song_file , keywords , base_dir_for_save , save_dir_for_songVec , save_dir_for_poemVec)
+        #MatchPoemSong.__init__(self , opt , poem_file , song_file , keywords , base_dir_for_save , save_dir_for_songVec , save_dir_for_poemVec)
+        super(MatchSeggedPoemSong,self).__init__(opt , poem_file , song_file , keywords , base_dir_for_save , save_dir_for_songVec , save_dir_for_poemVec)
         self.poem_file = poem_file
         self.song_file = song_file
         self.opt = opt
@@ -507,7 +508,6 @@ class MatchSeggedPoemSong(MatchPoemSong):
                 return True
         return False
 
-
     def getSeggedPoem(self):
         with open(self.poem_file,"r",encoding='utf8') as fin:
             self.poems = json.load(fin)
@@ -517,6 +517,8 @@ class MatchSeggedPoemSong(MatchPoemSong):
             poem_id = poem_dict['poem_id']
             for para_id , para_dict in enumerate(poem_dict['paras']):
                 score =  self.filterPoem(para_dict)
+                if poem_dict["poem_class"] in self.keywords:
+                    score += 10 + self.opt['poem_threshold']
                 if score < self.opt['poem_threshold']: #0.001
                     continue
                 if (not 'seg_point' in para_dict) or (not ( self.SatisfyBoundConstrain( len(para_dict['seg_point'])))):
@@ -545,7 +547,7 @@ class MatchSeggedPoemSong(MatchPoemSong):
         '''
         segged_poems with the type of list [], each element is a dict,
         element['content']
-          = ['first Segmentation','second Segmentation',....]
+          = [{text':'first Segmentation'},{text':'first Segmentation'},....]
         '''
         for one_prose_dict in self.segged_poems:
             for prose in one_prose_dict['content']:
@@ -599,8 +601,6 @@ class MatchSeggedPoemSong(MatchPoemSong):
                     fout.write("="*30)
                 fout.write("\n\n"+"*"*10+"one new show"+"*"*10)
 
-
-
     def forward(self,mode="gensim"):
         # self.mode = mode
         self.getSeggedPoem()
@@ -613,11 +613,93 @@ class MatchSeggedPoemSong(MatchPoemSong):
         print("len(self.segged_poems) = ",len(self.segged_poems))  # 211
         print("len(self.sub_songs) = ",len(self.sub_songs))  # 201
         self.sub_songs.sort(key=lambda song: song['match_score_with_topic'], reverse=True)
-        self.sub_poems.sort(key=lambda poem: poem['match_score_with_topic'], reverse=True)
+        self.segged_poems.sort(key=lambda poem: poem['match_score_with_topic'], reverse=True)
         self.ProseToVec()
         self.SongToVec()
         self.SimScoreCal()
         self.WriteToFile()
+
+class PoemMatchSong(MatchSeggedPoemSong):
+    def __init__(self ,opt, poem_file:str , song_file:str ,
+                 out_file :str
+                 , keywords:List[str] ,
+                 base_dir_for_save = r'E:\\PycharmProjects\\FirstDayOnMS2\\Data\\Poem_Song',
+                 save_dir_for_songVec = "songVec.pkl",
+                 save_dir_for_poemVec = "poemVec.pkl",
+                 idf_path = None,
+                 additional_key_words_path = None):
+        super(PoemMatchSong,self).__init__(opt , poem_file , song_file , keywords , base_dir_for_save , save_dir_for_songVec , save_dir_for_poemVec)
+        self.idf_path = idf_path
+        self.additional_key_words = dict()
+        if additional_key_words_path is not None:
+            self.additional_key_words = self.load_additional_key_words(additional_key_words_path)
+
+    def load_additional_key_words(self,path,max_rows=200):
+        wb = openpyxl.load_workbook(path)
+        sheet_names = wb.get_sheet_names()
+        res = dict()
+        for sheet_name in sheet_names:
+            sheet = wb.get_sheet_by_name(sheet_name)
+            for i, row in enumerate(sheet.rows):
+                if i == max_rows:
+                    break
+                word = row[0].value
+                weight = float(row[1].value)
+                res[word]=weight
+        return res
+
+    def ExtractKeyWordForSeg(self):
+        if self.idf_path is not None:
+            analyse.set_idf_path(self.idf_path)
+        '''
+        segged_poems with the type of list [], each element is a dict,
+        element['content'] = [{text':'first Segmentation'},{text':'first Segmentation'},....]
+        '''
+        for one_prose_dict in self.segged_poems:
+            for prose in one_prose_dict['content']:
+                all_content = prose['original_text']
+                print("all_content = ",all_content)
+                prose["key_words"] = analyse.textrank(all_content, topK=10, withWeight=True, allowPOS=('ns', 'n', 'vn','v'))#'v' #ns地名；n名词；vn名动词，比如思索；v动词
+                prose["idf_key_words"] = analyse.extract_tags(all_content, topK=10, withWeight=True, allowPOS=('ns', 'n', 'vn','v'))#'v' #ns地名；n名词；vn名动词，比如思索；v动词
+                prose["key_words"] = [[word_weight[0],word_weight[1] + self.additional_key_words[ word_weight[0] ] ] if word_weight[0] in self.additional_key_words.keys() else [ word_weight[0],word_weight[1] ]   for word_weight in prose["key_words"] ]
+                prose["idf_key_words"] = [[word_weight[0],word_weight[1] + self.additional_key_words[ word_weight[0] ] ] if word_weight[0] in self.additional_key_words.keys() else [ word_weight[0],word_weight[1] ]   for word_weight in prose["idf_key_words"] ]
+                prose["key_words"].sort(key = lambda t:t[1],reverse = True)
+                prose["idf_key_words"].sort(key = lambda t:t[1],reverse = True)
+
+    def findHighestScore(self,word_weight):
+        pass
+
+    def findBestSongsForThisProse(self):
+        '''
+        segged_poems with the type of list [], each element is a dict,
+        element['content'] = [{text':'first Segmentation'},{text':'first Segmentation'},....]
+        '''
+        for one_prose_dict in self.segged_poems:
+            songs_used = set()
+            for prose in one_prose_dict['content']:
+                prose["chosen_songs"] = self.modelSearchSong(prose["idf_key_words"][:3])
+            '''
+            one_prose_dict 中包含多个seg，每个seg会对应召回很多首歌曲。一个one_prose_dict即一个节目，一个节目中，有同样名字的歌曲是不合适的。
+            '''
+            prose["best_song"] = self.findHighestScore(prose['chosen_songs'])
+            songs_used.add(prose["best_song"])
+
+
+
+    def forward(self):
+        self.getSeggedPoem()
+        # TODO for faster run
+        pickle.dump(self.segged_poems, open(
+            os.path.join(self.base_dir_for_save, "segged_poems" + str(self.opt['poem_threshold']) + ".pkl"), "wb"))
+        json.dump(self.segged_poems,
+                  open(os.path.join(self.base_dir_for_save, "segged_poems" + str(self.opt['poem_threshold']) + ".json"),
+                       "w", encoding="utf-8"), ensure_ascii=False)
+        # TODO for selk.segged_poems 中包含这选出来的散文
+        print("len(self.segged_poems) = ", len(self.segged_poems))  # 211
+        self.segged_poems.sort(key=lambda poem: poem['match_score_with_topic'], reverse=True)
+        self.ExtractKeyWordForSeg()
+
+
 
 def T1():
     poem_song_matcher = MatchPoemSong(opt = opt,
