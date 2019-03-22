@@ -68,7 +68,12 @@ if __name__ == "__main__":
     poem_match_song = PoemMatchSong(opt=opt,
                                     poem_file=os.path.join(prefix_path,"Data\\Poem\\seged_poem_2019.json"),
                                     song_file=os.path.join(prefix_path,"Data\\Song\\song6.pkl"),
+                                    keywords=['爱情'],
                                     out_file=os.path.join(prefix_path,'Data\\Poem_Song\\seggedProseSong.txt'),
-                                    keywords=['夜晚', '深夜', '寂静', '安眠', '星空', '平静', '喧嚣', '静', '夜色', '月亮', "失眠"],
                                     idf_path = "idf.txt",
-                                    additional_key_words_path = "Poem/poemsClassStatic.xlsx")
+                                    additional_key_words_path = "Poem/loveClasstAutoGen.xlsx",
+                                    out_txt_dir= os.path.join(prefix_path,"Data\\Poem_Song\\ForYaml"))
+    poem_match_song.forward()
+    for turn_num in range(4,6):
+        poem_match_song.opt['lower_bound']=turn_num
+        poem_match_song.forward()
