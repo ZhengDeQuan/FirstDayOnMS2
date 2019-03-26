@@ -2,6 +2,17 @@ opt = {
     'poem_threshold':0.1,
 }
 
+clean_poem_opt = {
+    'min_para_length':200,
+    'max_para_length':None
+}
+
+seg_poem_opt = {
+    "min_seg_length":180,
+    "max_seg_length":270,
+    "temperature":30
+}
+
 
 class PoemClassPH:
     def __init__(self):

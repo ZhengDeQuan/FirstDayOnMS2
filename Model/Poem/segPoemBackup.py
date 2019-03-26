@@ -13,26 +13,25 @@ import string
 import os
 import jieba
 import json
-from sklearn.base import BaseEstimator
-from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.decomposition import LatentDirichletAllocation
-from nltk.metrics.segmentation import pk
-from nltk.metrics.segmentation import windowdiff
-#关于pk和windowdiff这两个评分器的内容，详见：https://www.nltk.org/_modules/nltk/metrics/segmentation.html
-from time import time
+
+Mode = "Test"
+"""
+1.确实输入数据格式
+"""
+
+#
+#Helper functions
+#
 import pickle
 import os
 from scipy import spatial
 from scipy.signal import argrelextrema
-from Poem.config import seg_poem_opt
 
-ProjectPath = "FirstDayOnMS2"
-abspath = os.path.abspath(os.getcwd())
-abspath = abspath.split(ProjectPath)
-prefix_path = os.path.join(abspath[0], ProjectPath)
 
-def load_chinese_stop_words(file = os.path.join(prefix_path,'Model\\stop_words\\stop_words.pkl')):
+
+def load_chinese_stop_words(file = 'stop_words/stop_words.pkl'):
     return pickle.load(open(file, "rb"))
+
 from sklearn.feature_extraction.text import ENGLISH_STOP_WORDS
 CHINESE_STOP_WORDS = load_chinese_stop_words()
 CHINESE_PUNCTUATION = {'‘','’','“','”','（','）','《','》','！','？','；','、','：','。','，'}
@@ -189,6 +188,10 @@ def max_right(sequence, ind_curr):
         max = sequence[ind_curr + 1]
         ind_curr += 1
     return max
+
+#
+#Document class
+#
 
 class Document2:
     """
@@ -348,6 +351,9 @@ class Document:
         segments.append(' '.join(self.sentences[self.boundaries[-1]:]))
         return segments
 
+#
+#Topic Tiling class
+#
 
 class TopicTiling:
     """
@@ -367,6 +373,7 @@ class TopicTiling:
     def fit(self, sentence_vectors):
         """
         Runs Topic Tiling algorithm on list of sentence vectors.
+
         :param sentence_vectors: List (iterable) of topic distributions for each sentence in document.
                                  t-th element of sentence vector is weight for t-th topic for sentence,
                                  higher weight means that sentence is "more about" t-th topic.
@@ -401,7 +408,7 @@ class TopicTiling:
         tmp = filter(lambda d: d[0] > condition, depth_scores)
         self.boundaries = [d[1] for d in tmp]
 
-        return self.boundaries, depth_scores
+        return self.boundaries
 
     def set_m(self, m):
         """
@@ -409,6 +416,18 @@ class TopicTiling:
         """
         if m:
             self.m = m
+
+#
+#Segmentation Engine class
+#
+
+from sklearn.base import BaseEstimator
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.decomposition import LatentDirichletAllocation
+from nltk.metrics.segmentation import pk
+from nltk.metrics.segmentation import windowdiff
+#关于pk和windowdiff这两个评分器的内容，详见：https://www.nltk.org/_modules/nltk/metrics/segmentation.html
+from time import time
 
 
 class SegmentationEngine(BaseEstimator):
@@ -427,7 +446,7 @@ class SegmentationEngine(BaseEstimator):
     :param random_state: Random state.
     """
 
-    def __init__(self, n_topics=10, max_iter=None, a=None, b=None, m=None, random_state=None,lda_learning_method = "batch",opt = seg_poem_opt):
+    def __init__(self, n_topics=10, max_iter=None, a=None, b=None, m=None, random_state=None,lda_learning_method = "batch"):
         """
         Initializes estimator.
         """
@@ -442,7 +461,6 @@ class SegmentationEngine(BaseEstimator):
         self.lda = LatentDirichletAllocation(n_topics=n_topics, max_iter=max_iter, doc_topic_prior=a,
                                              topic_word_prior=b, random_state=random_state,learning_method=lda_learning_method)
         self.tt = TopicTiling(m=m)
-        self.opt = opt
 
     def fit(self, documents, input_type='sentence'):
         """
@@ -472,6 +490,7 @@ class SegmentationEngine(BaseEstimator):
     def predict(self, documents):
         """
         Calculates segment boundaries for documents.
+
         :param documents: List (iterable) of documents (class Document).
         :return: List of boundaries for each document.
         """
@@ -480,126 +499,8 @@ class SegmentationEngine(BaseEstimator):
         for document in documents:
             sentence_vectors = [self.lda.transform(self.vectorizer.transform([sentence])) for sentence in
                                 document.sentences]
-            '''sentence 是用空格间隔的 string type'''
-            each_sentence_len = [len(''.join(sentence.split())) for sentence in document.sentences]
-            boundaries, depth_scores = self.tt.fit(sentence_vectors)
-            estimated_boundaries.append((boundaries, depth_scores, each_sentence_len))
-        Res = self.infer_further(estimated_boundaries)
-        return Res
-
-    def infer_further(self, estimated_boundaries):
-        Res = []
-        def find_dp(start, end, each_sentence_len, depth_scores):
-            '''
-            在开区间(start,end)上寻找,使得分割点满足要求的，分割点，并且最好是分割在depth_score最大的点上
-            算法，从depth_socre最大的开始增加，直到满足要求
-            '''
-            start_i = start + 1
-            end_i = end - 1
-            if start_i > end_i:
-                return []
-            seg_able_point = []
-            for ele in depth_scores:
-                if start_i<=ele[1]<=end_i:
-                    seg_able_point.append(ele)
-            if len(seg_able_point)==0:
-                return []
-
-            seg_able_point.sort(key = lambda t:t[0],reverse=True)
-
-            for seg_num in range(1,len(seg_able_point)+1):
-                Flag = True
-                pre_bound = start-1
-                for seg_point in seg_able_point[:seg_num]:
-                    if not (self.opt['min_seg_length'] <= sum(each_sentence_len[pre_bound+1:seg_point[1]]) <= self.opt['max_seg_length']):
-                        Flag = False
-                        break
-                    pre_bound = seg_point[1]
-                if not (self.opt['min_seg_length'] <= sum(each_sentence_len[pre_bound + 1:end]) <= self.opt['max_seg_length']):
-                    Flag = False
-                if Flag:
-                    return [ele[1] for ele in seg_able_point[:seg_num]]
-            return []
-
-        for (boundaries, depth_scores, each_sentence_len) in estimated_boundaries:
-            print("boundaries = ",boundaries)
-            print("depth_scores = ",depth_scores)
-            print("each_sentence_len = ",each_sentence_len)
-            '''
-            sent =  秋季 随想
-            sent =  秋天 多愁善感 夏季 华丽 落幕 中 悄然 而临 黄色 枯叶 空中 划出 一道 思索 弧线 悠然 沉寂 真 可谓 一叶知秋 相比 秋 洗刷 蔚蓝 高空 更 喜欢 渲染 火红 枫林 停车 坐爱 枫林晚 霜叶 红于 二月 花 枫林 秋 私语 述说 沧桑 生命 故事 秋雨 缠绵悱恻 世界 织 一条 精致 雨帘 可谓 大珠小珠落玉盘 清脆 声是 动听 催眠曲 秋 春 傲慢 夏 奔放 冬 冷酷 秋是 知性 感性 时常 思考 生命 意义 思索 生命 厚度 青春期 生命 索取 美丽 智慧 面对 挫折 只能 望天 兴叹
-            sent =  纯真 童年 真挚 告白 不屑 笑容 留恋 踏入 青春期 面对 生命 变化 感到 无所适从 秋天 新 环境 新 老师 同学 新 学习 生活 生命 美丽 雾 置身其中 分辨 不清 雨 遮住 眼 虚无 寻找 奇迹 也许 生命 无尽 失望 中 找寻 一丝 希望 犹如 空谷回音 听 不到 真切 回答 听见 无助 呐喊 城市 灯塔 中喊出 愿望 总有一天 听见 城市 回复 城市 幸福 漂流瓶 命运 中 搁浅 找到 爱
-            sent =  面对 生活 放荡不羁 谨小慎微 时常 听到 只缘身在此山中 无力 哀叹 青春 迷茫 生活 残酷 喜欢 沉浸 空想 中 海市蜃楼 美丽 是因为 神秘 世外桃源 令人 向往 是因为 束之高阁 清高 颐指气使 朋友 不解 中 幡然醒悟 清高 修身 处世 做 一支 出淤泥而不染 濯 清涟 妖 花朵 意志 前提 一朵 莲花 根 支撑 鲜艳 外表 只能 山花 烂漫 时 丛中 笑
-            sent =  秋是 忧郁 多愁善感 依稀记得 红衣 女子 悲痛 余 葬花 故事 糟糕 成绩 中 潸然泪下 一只 蛹 尚未 摆脱 束缚 蓝色 蛹 等待 金色 碟 幻化 想 蛹 厚重 外壳 保护 安然 沉睡 受 不到 外界 风雨 侵袭 父母 温暖 双臂 做 美好 梦 蓝色 蛹 内心 充满 挣脱 外壳 悸动 外壳 破碎 声中 破茧 成蝶 金色 翅膀 金色 阳光 熠熠生辉 诧异 生 出手 奔跑 追逐 金色 蝶 金色 蝶 回头 渐渐 消失 眼帘 哭 泣不成声 是因为 孤独 是因为 懦弱 体会 温暖 港湾 停留 太久 世界 奋斗 拥有 生活 岁月蹉跎 黄了 树叶 绿 芭蕉 风雨兼程 中 刻骨 伤害 中 加深 生命 智慧 美丽 厚度
-            sent =  擦干 眼泪 站 脚步 踉踉跄跄 一份 坚定 起书 主动 地去 汲取 生命 营养 一改 自命清高 常态 融入 朋友 主动 交谈 参加 活动 锻炼 面对 失败 挫折 依然 笑颜 如花 秋 忧伤 生命 传承 坠入 堕落 悬崖 众目睽睽 中 高姿态 面对 城市 星空 喊 出 时 早已 答案 答案 千磨 万击 坚劲 任尔 东西南北 风 一叶知秋 管中窥豹 努力 奋斗 中 生命 真谛 缓缓的 展现 面前 喜欢 深沉 热爱 生命
-            boundaries =  [1]
-            depth_scores =  [(0.4447948396505025, 1), (0.05610152935946028, 3)]
-            each_sentence_len =  [4, 171, 137, 129, 204, 142]
-            '''
-            pre_bound_start = -1
-            pre_bound = -1
-            res = []
-            boundaries.append(len(each_sentence_len)-1)
-            Flag=True
-            for indx, bound in enumerate( boundaries):
-                if self.opt['min_seg_length'] <= sum(each_sentence_len[pre_bound+1:bound+1]) <= self.opt['max_seg_length']:
-                    res.append(bound)
-                    pre_bound_start = pre_bound + 1
-                    pre_bound = bound
-                elif sum(each_sentence_len[pre_bound+1:bound+1]) > self.opt['max_seg_length']:
-                    temp = find_dp(pre_bound+1,bound,each_sentence_len,depth_scores) #在pre_bound+1 ，bound之间寻找一个满足长度要求的分割点，再次分隔
-                    if temp:
-                        res.append(pre_bound+1)
-                        res.extend(temp)
-                        res.append(bound)
-                        pre_bound_start = pre_bound+1
-                        pre_bound = bound
-                    else:
-                        Flag = False #这一段不存在满足条件的分割，只好放弃这个节目
-                        break
-                elif sum(each_sentence_len[pre_bound+1:bound+1]) < self.opt['min_seg_length']:
-                    #如果遇到某一个段太短的情况的话，只能将这个段粘贴到前一段之后，或者下一段之前了
-                    #注意当前的seg是开头的seg，和结尾的seg的情况。
-                    '''
-                    与之前的seg合并
-                    '''
-                    if indx != 0:
-                        if len(res) >= 2:
-                            if pre_bound_start != -1:
-                                last_seg_start = pre_bound_start + 1
-                            else:
-                                last_seg_start = res[-2]
-                                print("正常情况不会走这个分支")
-                                assert 1==0
-                        else:
-                            last_seg_start = 0
-                        if sum(each_sentence_len[last_seg_start:bound+1]) <= self.opt['max_seg_length']:
-                            if len(res)>0:
-                                res.pop(-1)
-                            else:
-                                res.append(0)
-                                assert bound != 0
-                            res.append(bound)
-                            pre_bound_start = pre_bound + 1
-                            pre_bound = bound
-                            continue
-                    '''
-                    其余的情况都是要与下一个seg合并的
-                    '''
-                    if indx != len(boundaries)-1:
-                        continue
-                        #pre_bound不变，之间走到下一个bound
-                    else:
-                        #这是最后一个bound，肯定不可能拼出来了。
-                        Flag = False
-                        break
-            if Flag:
-                res.pop(0)
-                Res.append(res)
-            else:
-                Res.append([])
-        return Res
-
+            estimated_boundaries.append(self.tt.fit(sentence_vectors))
+        return estimated_boundaries
 
     def score(self, X, method='pk',k=None):
         """
@@ -677,13 +578,13 @@ def get_each_document(path):
                     continue
                 temp = Document2()
                 for one in fencied_para_content:
-                    #one 一个段落，一个list[word1 ,word2,.....]
+                    #one 一个段落，一个list[word1 ,word2]
                     one_paragraph = tokenizeChinese(one)
                     if one_paragraph:
                         temp.sentences.append(one_paragraph)
                 documents.append(temp)
-                # if len(documents) >= 2000 :#测试时为了快速
-                #     return documents
+                if len(documents) >= 2000 :#测试时为了快速
+                    return documents
     return documents
 
 def WriteBackToPoem(path, Res , out_path):
@@ -709,17 +610,90 @@ def WriteBackToPoem(path, Res , out_path):
     return None
 
 if __name__ == "__main__":
-
-    documents = get_each_document(os.path.join(prefix_path,'Data\\Poem\\processed_poem_2019.json'))
+    #
+    # Loading dataset
+    #
+    documents = get_each_document('poem_data/processed_poem.json')
+    #engine = SegmentationEngine(n_topics=100, max_iter=70, a=0.1, b=0.01, m=0.5 , lda_learning_method="online")
     engine = SegmentationEngine(n_topics=100, max_iter=70, a=0.1, b=0.01, m=0.5)#lda有两种训练方式，batch是默认的，更快，将所有数据导入内存训练；online，更慢，将数据分批导入内存训练。
+    # splitter = ShuffleSplit(len(documents), n_iter=1, test_size=.05, random_state=273)
+    # X_train = []
+    # X_test = []
+    # for train_indices, test_indices in splitter:
+    #     X_train = [documents[i] for i in train_indices[:100]]  # take 100 documents , 只取100个应该是为了验证程序的有效性，只取少量数据
+    #     X_test = [documents[i] for i in test_indices]
+
     print("the length of the documents = ",len(documents))
     X_train = documents
     X_test = documents
     # Input: SENTENCE
     print('SENTENCE')
-    # engine.fit(X_train, input_type='sentence')
-    # engine.pickle_lda(os.path.join(prefix_path,'Model\\topicTilingWeights'))
-    engine.get_pickled_lda(os.path.join(prefix_path,'Model\\topicTilingWeights'))
+    engine.fit(X_train, input_type='sentence')
+    engine.pickle_lda("topicTilingWeightsChoi")
+    engine.get_pickled_lda("topicTilingWeightsChoi")
     Res = engine.predict(X_test)
-    WriteBackToPoem(os.path.join(prefix_path,'Data\\Poem\\processed_poem_2019.json'),Res,os.path.join(prefix_path,'Data\\Poem\\seged_poem_temp.json'))
+    # WriteBackToPoem('poem_data/processed_poem.json',Res,'poem_data/seged_poem.json')
+
+
+    # print('Pk = %f' % (1 - engine.score(X_test)))
+    # print('WD = %f' % (1 - engine.score(X_test, method='wd')))
+    #
+    # '''
+    # SEGMENT
+    # Fitted in 91.38 seconds
+    # Pk = 0.175918
+    # WD = 0.223952
+    # DOCUMENT
+    # Fitted in 44.14 seconds
+    # Pk = 0.360908
+    # WD = 0.411459
+    # SENTENCE
+    # Fitted in 216.62 seconds
+    # Pk = 0.459176
+    # WD = 0.533597
+    # '''
+    #
+    # #
+    # # Train-test split
+    # #
+    #
+    # X_train, X_test = train_test_split(documents, test_size=0.2, random_state=273)
+    #
+    # #
+    # #
+    # # Grid Search
+    # # Optimizing parameters $K$, $\alpha$ and $x$
+    # # WARNING! Very slow block DO NOT RUN THIS!!!
+    # #
+    # #
+    #
+    # # from sklearn.grid_search import GridSearchCV
+    # #
+    # # cv = ShuffleSplit(len(X_train), n_iter=1, test_size=.2)
+    # #
+    # # engine = SegmentationEngine(max_iter=60, a=0.1, b=0.01)
+    # # params = {'n_topics': [60, 80, 100, 120, 130, 140, 150, 160], 'm': [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7],
+    # #           'a': [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]}
+    # # clf = GridSearchCV(engine, params, cv=cv)
+    # #
+    # # t = time()
+    # # clf.fit(X_train)
+    # # print('Duration %f hours' % ((time() - t) / 3600))
+    #
+    # # Model with optimal parameters
+    # engine = SegmentationEngine(n_topics=150, max_iter=100, a=0.1, b=0.01, m=0.2, random_state=273)
+    # engine.fit(X_train)
+    # #Fitted in 1587.52 seconds
+    #
+    # # score function is returning(1 - score) because scikit - learn grid search treats higher value as better(which is opposite for Pk and WD)
+    #
+    # print('Pk = %f' % (1 - engine.score(X_test, method='pk')))
+    # print('WD = %f' % (1 - engine.score(X_test, method='wd')))
+    #
+    # # Pk = 0.096507
+    # # WD = 0.126073
+    #
+    # #Choose which document to plot and generate plot indices
+    # doc = X_test[174]  # just change index for chosing different document
+    # plot_indices = engine.predict([doc])[0]
 

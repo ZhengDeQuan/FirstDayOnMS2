@@ -1,11 +1,12 @@
 import json
 import re
 import os
+import numpy as np
 import pickle
 import jieba
 from jieba import analyse
 from typing import List , Dict ,AnyStr
-from Poem.config import PoemClassPH, Festival, Season, XiaoiceCharacterSetting
+from Poem.config import PoemClassPH, Festival, Season, XiaoiceCharacterSetting,clean_poem_opt
 from collections import Counter
 
 ParaDict = Dict[str,str]
@@ -13,7 +14,8 @@ ParaList = List[ParaDict]
 class PoemCleaner:
     def __init__(self,poemFiles=[],
                  dir_to_save=os.path.join(r'E:\\PycharmProjects\\FirstDayOnMS2\\Data\\Poem','processed_poem.json'),
-                 idf_path=None):
+                 idf_path=None,
+                 opt = clean_poem_opt):
         super(PoemCleaner,self).__init__()
         self.poem_id_offset = 0
         self.poems = []
@@ -28,7 +30,11 @@ class PoemCleaner:
                 self.poems.extend(poems)
                 self.poem_id_offset = len(self.poems)
         print("length = ",len(self.poems))
-        self.min_para_length = 200
+        self.min_para_length = opt['min_para_length']
+        if opt['max_para_length'] is None:
+            self.max_para_length = np.inf
+        else:
+            self.max_para_length = opt['max_para_length']
 
     def _get_offset_id(self,poems,offset):
         if offset == 0:
@@ -55,7 +61,10 @@ class PoemCleaner:
         origin_poem = re.sub(r'文/未名人', '', origin_poem)
         origin_poem = re.sub(r'——题记', '', origin_poem)
         origin_poem = re.sub(r'-题记', '', origin_poem)
+        origin_poem = re.sub(r'题记', '', origin_poem)
         origin_poem = re.sub(r'——', '', origin_poem)
+        origin_poem = re.sub(r'编辑荐：', '', origin_poem)
+
 
         ele = [r'【一】', r'【二】', r'【三】', r'【四】', r'【五】', r'【六】', r'【七】', r'【八】', r'【九】', r'【后记】','原诗：']
         for e in ele:
@@ -83,9 +92,6 @@ class PoemCleaner:
             origin_poem = self.WashText(origin_poem)
             if len(origin_poem) != 0:
                 temp_dict['washed_poem'] = origin_poem
-                poem_title = temp_dict["poem_title"]
-                # if poem_title != "幸福的理由":
-                #     continue
                 new_poems.append(temp_dict)
         self.poems = new_poems
 
@@ -192,7 +198,7 @@ class PoemCleaner:
                 for inner_p in para_dict['para_content']:
                     inner_p = self.RemoveSpecificChars(poem = inner_p)
                     inner_temp.append(inner_p)
-                if len(''.join(inner_temp)) < self.min_para_length: # poem中哪一首sub_poem比较短，就不要了
+                if len(''.join(inner_temp)) < self.min_para_length or len(''.join(inner_temp)) > self.max_para_length: # poem中哪一首sub_poem比较短，就不要了
                     continue
                 para_dict['para_content'] = inner_temp
                 new_para.append(para_dict)
