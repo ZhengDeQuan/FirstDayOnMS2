@@ -19,6 +19,8 @@ gensim_weight_path = 'E:\\PycharmProjects\\FirstDayOnMS2\\Data\\Poem_Song\\gensi
 bert_weight_path_base = 'E:\\PycharmProjects\\FirstDayOnMS2\\Data\\Poem_Song\\chinese_L-12_H-768_A-12'
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
 
+
+
 class MatchPoemSong:
     def __init__(self ,opt, poem_file:str , song_file:str , keywords:List[str] ,
                  base_dir_for_save = r'E:\\PycharmProjects\\FirstDayOnMS2\\Data\\Poem_Song',
@@ -511,10 +513,18 @@ class MatchSeggedPoemSong(MatchPoemSong):
                 return True
         return False
 
-    def getSeggedPoem(self):
+    def getSeggedPoem(self,seg_point_field_name=None):
+        if seg_point_field_name is None:
+            seg_point_field_name = 'seg_point'
+
         with open(self.poem_file,"r",encoding='utf8') as fin:
             self.poems = json.load(fin)
         print("getSeggedPoem len(self.poems) = ",len(self.poems))
+        f = open("out.txt","w",encoding="utf-8")
+        num_desire_class = 0
+        num_no_seg = 0
+        num_desire_class_seg_1 = 0
+        num_desire_class_seg_2 = 0
         self.keywords_count = Counter(self.keywords)
         self.segged_poems = []
         for poem_dict in self.poems:
@@ -525,9 +535,18 @@ class MatchSeggedPoemSong(MatchPoemSong):
                     score += 10 + self.opt['poem_threshold']
                 if score < self.opt['poem_threshold']: #0.001
                     continue
-                if ('seg_point' not in para_dict) or ( not ( self.SatisfyBoundConstrain( len(para_dict['seg_point'])))):
+                num_desire_class += 1
+                if seg_point_field_name not in para_dict:
+                    num_no_seg += 1
+                else:
+                    if len(para_dict[seg_point_field_name]) ==0:
+                        num_desire_class_seg_1 += 1
+                    elif len(para_dict[seg_point_field_name]) == 1:
+                        num_desire_class_seg_2 += 2
+
+                if (seg_point_field_name not in para_dict) or ( not ( self.SatisfyBoundConstrain( len(para_dict[self.seg_point_field_name])))):
                     continue
-                seg_point = para_dict['seg_point']
+                seg_point = para_dict[seg_point_field_name]
                 print("getSeggedPoem seg_point = ",seg_point)
                 title = para_dict['fencied_para_title']
                 title = ' '.join(title).strip()
@@ -546,6 +565,10 @@ class MatchSeggedPoemSong(MatchPoemSong):
                 temp = {'poem_id':poem_id,"para_id":para_id,'match_score_with_topic':score,"content":content,"url":poem_dict['url']}
                 self.segged_poems.append(temp)
         self.segged_poems.sort(key=lambda poem: poem['match_score_with_topic'], reverse=True)
+        print("num_desire_class = ",num_desire_class,
+              ' num_desire_class_seg_1=',num_desire_class_seg_1,
+              ' num_desire_class_seg_2=',num_desire_class_seg_2,
+              ' num_no_seg = ',num_no_seg)
 
     def ProseToVec(self):
         '''
@@ -651,7 +674,6 @@ class SearchSong:
         except:
             print("Error in request.")
             print("query = ",query)
-            exit(78)
             return None
         return List
 
@@ -668,12 +690,15 @@ class PoemMatchSong(MatchSeggedPoemSong):
                  save_dir_for_poemVec = "poemVec.pkl",
                  idf_path = None,
                  additional_key_words_path = None,
-                 out_txt_dir = None):
-        super(MatchSeggedPoemSong,self).__init__(opt , poem_file , song_file , keywords , base_dir_for_save , save_dir_for_songVec , save_dir_for_poemVec)
+                 out_txt_dir = None,
+                 seg_point_field_name="seg_point"):
+        super(MatchSeggedPoemSong,self).__init__(opt , poem_file , song_file , keywords , base_dir_for_save , save_dir_for_songVec ,
+                                                 save_dir_for_poemVec)
         self.base_dir_for_save = base_dir_for_save
         print("PoemMatchSong.__init__(): keywords = ",self.keywords)
         self.out_file = out_file
         self.idf_path = idf_path
+        self.seg_point_field_name = seg_point_field_name
         if self.idf_path is not None:
             analyse.set_idf_path(self.idf_path)
         self.additional_key_words = dict()
@@ -794,6 +819,8 @@ class PoemMatchSong(MatchSeggedPoemSong):
             out_txt_dir = self.out_txt_dir + time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime())
         os.makedirs(out_txt_dir,exist_ok=True)
         os.chdir(out_txt_dir)
+        print("out_txt_dir = ",out_txt_dir)
+        print("os.getcwd()",os.getcwd())
         with open("data_"+str(self.opt['lower_bound'])+".txt","w",encoding="utf-8") as fout:
             for index, show in enumerate( self.shows):
                 out_content = [str(index)]
@@ -806,11 +833,8 @@ class PoemMatchSong(MatchSeggedPoemSong):
                 out_content = '\t'.join(out_content)
                 fout.write(out_content+"\n")
 
-
-
-
     def forward(self):
-        self.getSeggedPoem()
+        self.getSeggedPoem(self.seg_point_field_name)
         # TODO for faster run
         pickle.dump(self.segged_poems, open(
             os.path.join(self.base_dir_for_save, "segged_poems" + str(self.opt['poem_threshold']) + ".pkl"), "wb"))
@@ -820,6 +844,8 @@ class PoemMatchSong(MatchSeggedPoemSong):
         # TODO for selk.segged_poems 中包含这选出来的散文
         print("PoemMatchSong.forward():len(self.segged_poems) = ", len(self.segged_poems))
         self.segged_poems.sort(key=lambda poem: poem['match_score_with_topic'], reverse=True)
+        print(self.segged_poems[0])
+        exit(89)
         self.ExtractKeyWordForSeg()
         self.findBestSongsForThisProse()
         self.WriteToFile()
@@ -832,7 +858,7 @@ if __name__ == "__main__":
     # T1()
     # exit(90)
     poem_song_matcher = MatchSeggedPoemSong(opt=opt,
-                                      poem_file=os.path.join('E:\\PycharmProjects\\FirstDayOnMS2\\Data\\Poem',
+                                            poem_file=os.path.join('E:\\PycharmProjects\\FirstDayOnMS2\\Data\\Poem',
                                                              "seged_poem.json"),
                                             song_file=os.path.join('E:\\PycharmProjects\\FirstDayOnMS2\\Data\\Song',
                                                                    "song4.pkl", ),
