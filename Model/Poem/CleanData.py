@@ -54,6 +54,8 @@ class PoemCleaner:
         origin_poem = re.sub(r'\( 文章阅读网：www\.sanwen\.com \)', "", origin_poem)
         origin_poem = re.sub(r'（ 文章阅读网：www\.sanwen\.com ）', "", origin_poem)
         origin_poem = re.sub(r'\(中国散文网原创投稿 www\.sanwen\.com\)', "", origin_poem)
+        origin_poem = re.sub(r'\(中国散文网www\..*\.com\)', '', origin_poem)
+
         # origin_poem = re.sub(r'\(中国散文网.*\)', '', origin_poem)
         # origin_poem = re.sub(r'\(.*\)', "", origin_poem)
         # origin_poem = re.sub(r'（.*）', "", origin_poem)

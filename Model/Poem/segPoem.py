@@ -348,7 +348,6 @@ class Document:
         segments.append(' '.join(self.sentences[self.boundaries[-1]:]))
         return segments
 
-
 class TopicTiling:
     """
     Implementation of Topic Tiling algorithm (M. Riedl and C. Biemann. 2012, Text Segmentation with Topic Models)
@@ -409,7 +408,6 @@ class TopicTiling:
         """
         if m:
             self.m = m
-
 
 class SegmentationEngine(BaseEstimator):
     """
@@ -707,6 +705,52 @@ def WriteBackToPoem(path, Res , out_path):
                     json.dump(poems, open(out_path, "w" , encoding="utf8"), ensure_ascii=False)
                     return
     return None
+
+class SegPoem:
+    def __init__(self,poem_file , out_file , opt = seg_poem_opt):
+        self.poem_file = poem_file
+        self.out_file = out_file
+        self.opt = opt
+        self.min_seg_length = opt['min_seg_length']
+        self.max_seg_length = opt['max_seg_length']
+        self.poems = json.load(open(poem_file,"r",encoding="utf-8"))
+
+
+    def SegPoem(self):
+        def SC(length):
+            '''Satisfy length Constrain'''
+            if self.min_seg_length<=length<=self.max_seg_length:
+                return True
+            return False
+
+        def SegParaByRule(one_para):
+            '''seg para by the length of each paragraph'''
+            length = len(one_para['para_content'])
+            if length == 1:
+                if SC(len(one_para['para_content'][0])):
+                    return [0]
+                return []
+            res = []
+            seg_start = 0
+            for seg_end in range(1,length):
+                cur_len = len(''.join(one_para['para_content'][seg_start:seg_end]))
+                if SC(cur_len):
+                    res.append(seg_end-1)
+                    seg_start = seg_end
+                elif cur_len > self.max_seg_length:
+                    return []
+                elif cur_len < self.min_seg_length:
+                    continue
+            return res
+
+        for one_poem in self.poems:
+            for one_para in one_poem['paras']:
+                rule_based_seg_points = SegParaByRule(one_para)
+                print("rule_based_seg_points = ",rule_based_seg_points)
+                one_para['rule_based_seg_points'] = rule_based_seg_points
+        json.dump(self.poems,open(self.out_file,"w",encoding="utf-8"))
+
+
 
 if __name__ == "__main__":
 
