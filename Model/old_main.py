@@ -28,14 +28,14 @@ if __name__ == "__main__":
     '''
     清洗散文
     '''
-    poemcleaner = PoemCleaner(
-        [os.path.join(path_opt['base_dir_for_save_raw_poem_from_es'],
-                      path_opt['out_file_name_for_raw_poem_from_es'])],
-        idf_path = path_opt['idf_path'])
-    poemcleaner.forward(dir_to_save = path_opt['path_to_cleaned_poem'])
-    '''
-    切割散文
-    '''
+    # poemcleaner = PoemCleaner(
+    #     [os.path.join(path_opt['base_dir_for_save_raw_poem_from_es'],
+    #                   path_opt['out_file_name_for_raw_poem_from_es'])],
+    #     idf_path = path_opt['idf_path'])
+    # poemcleaner.forward(dir_to_save = path_opt['path_to_cleaned_poem'])
+    # '''
+    # 切割散文
+    # '''
     if match_opt["seg_point_field_name"] == "rule_based_seg_points":
         '''
         TopicTilling 切割
@@ -70,23 +70,37 @@ if __name__ == "__main__":
         ST = StoreProse()
         ST.getProse(path_opt['path_to_RULEsegged_poem'])
         ST.storeProse(index_="prose_segged_by_rule", type_="prose")
-    '''
-    从es上得到相应类别的散文
-    '''
-    # GP = GetProse(base_save_dir=os.path.join(prefix_path, "Data\\Poem"),out_file_name="seged_poem_20190402.json")
-    # GP.crawlPoem(index = 'prose_segged_by_algo' , key_words=['爱情','恋爱']) # alternative prose_segged_by_rule
-    # 歌曲的部分
-    '''
-    从es上得到相应类别的歌曲
-    '''
-    songClawer = songSpider(target=['http://corechat-usermemory-int.trafficmanager.net:19200/'],
-                            filter_by_comment=False, pklName=0,
-                            base_save_dir=path_opt['base_dir_for_save_raw_song_from_es'],
-                            out_file_name=path_opt['out_file_name_for_raw_poem_from_es'],
-                            )
-    songClawer.crawlSong(index='migu_music_merged_current')
-
+    # '''
+    # 从es上得到相应类别的散文
+    # '''
+    # # GP = GetProse(base_save_dir=os.path.join(prefix_path, "Data\\Poem"),out_file_name="seged_poem_20190402.json")
+    # # GP.crawlPoem(index = 'prose_segged_by_algo' , key_words=['爱情','恋爱']) # alternative prose_segged_by_rule
+    # # 歌曲的部分
+    # '''
+    # 从es上得到相应类别的歌曲
+    # '''
+    # # songClawer = songSpider()
+    # # songClawer.crawlSong()
+    # songClawer = songSpider(target=['http://corechat-usermemory-int.trafficmanager.net:19200/'],
+    #                         filter_by_comment=False, pklName=0,
+    #                         base_save_dir=path_opt['base_dir_for_save_raw_song_from_es'],
+    #                         out_file_name=path_opt['out_file_name_for_raw_poem_from_es'],
+    #                         )
+    # songClawer.crawlSong(index='migu_music_merged_current')
+    # # merger = MergeSongComment(in_file=os.path.join(path_opt['base_dir_for_save_raw_song_from_es'],path_opt['out_file_name_for_raw_poem_from_es']),
+    # #                           out_file=path_opt['out_file_name_for_merge_comment_song'],
+    # #                           base_dir=path_opt['base_dir_for_merge'])
+    # # merger.MergeComment()
+    #
+    #
     # 匹配的部分
+    # poem_song_matcher = MatchSeggedPoemSong(opt=opt,
+    #                                         poem_file=os.path.join(prefix_path,"Data\\Poem\\seged_poem_20190402.json"),
+    #                                         song_file=os.path.join(prefix_path,"Data\\Song\\song6.pkl"),
+    #                                         out_file=os.path.join(prefix_path,'Data\\Poem_Song\\seggedProseSong.txt'),
+    #                                         keywords=['夜晚', '深夜', '寂静', '安眠', '星空', '平静', '喧嚣', '静', '夜色', '月亮', "失眠"]
+    #                                         )
+    # poem_song_matcher.forward()
     if match_opt["seg_point_field_name"] == "rule_based_seg_points":
         poem_match_song = PoemMatchSong(opt=opt,
                                         poem_files=path_opt['path_to_RULEsegged_poem'],
