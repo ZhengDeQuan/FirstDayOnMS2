@@ -1,7 +1,7 @@
 import os
 from Poem.crawlPoem import poemSanwenji , poemChinaSw
 from Poem.PoemRawDataES import StoreRawProse
-from config import opt
+from config import path_opt
 
 ProjectPath = "FirstDayOnMS2"
 abspath = os.path.abspath(os.getcwd())
@@ -14,15 +14,17 @@ if __name__ == "__main__":
     '''
     爬取散文
     '''
-    # spiderOnsanwenji= poemSanwenji(base_url=None)
+    # spiderOnsanwenji= poemSanwenji(base_url=None,
+    #                                dir_to_save = path_opt['path_to_raw_poems'][0])
     # spiderOnsanwenji.forward()
-    # poemSpiderOnchinasw = poemChinaSw(base_url="http://www.sanwen.com/sanwen/jingdiansanwen/")
+    # poemSpiderOnchinasw = poemChinaSw(base_url="http://www.sanwen.com/sanwen/jingdiansanwen/",
+    #                                   dir_to_save=path_opt['path_to_raw_poems'][1])
     # poemSpiderOnchinasw.forward()
     '''
     es写散文
     '''
     SP = StoreRawProse()
-    for path in opt['path_to_raw_poems']:
+    for path in path_opt['path_to_raw_poems']:
         SP.getProse(path)
         SP.storeProse()
         print("finish ",path)
