@@ -67,11 +67,15 @@ class StoreProse:
         )
 
     def storeProse(self,index_ = "prose_segged_by_algo",type_="prose"):
-        result=self.es.indices.delete(index=index_)
-        print("result = ",result)
-        # exit(6)
-        result=self.es.indices.create(index=index_)
-        print("result = ",result)
+        indices = self.es.cat.indices()
+        indices = [ele['index'] for ele in indices]
+        if index_ not in indices:
+            result = self.es.indices.create(index=index_)
+            print("result = ", result)
+            print("over")
+        # else:
+        #     result=self.es.indices.delete(index=index_)
+        #     print("result = ",result)
         self.set_mapping(doc_type=type_,target_index=index_)
         print("over")
         # if self.prose is None:
