@@ -1,5 +1,5 @@
 opt = {
-    'poem_threshold':0.1,
+    'poem_threshold':0.1, #诗歌关键词与查询关键词匹配得分的最低阈值
 }
 
 clean_poem_opt = {

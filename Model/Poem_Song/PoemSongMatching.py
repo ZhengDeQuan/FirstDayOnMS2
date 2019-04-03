@@ -426,7 +426,6 @@ class MatchPoemSong:
         json.dump(self.sub_poems,open(os.path.join(self.base_dir_for_save,"sub_poems"+str(self.opt['poem_threshold'])+".json"),"w",encoding="utf-8"),ensure_ascii=False)
         self.WriteSelectedPoemToFileForLook(self.sub_poems, "ForLook\\sub_poems"+str(self.opt['poem_threshold'])+".json")
         print("len(sub_poems) = ",len(self.sub_poems))
-        exit(90)
         # self.getSong()
         # pickle.dump(self.sub_songs,open(os.path.join(self.base_dir_for_save,"sub_songs.pkl"),'wb'))
         self.sub_songs = pickle.load(open(os.path.join(self.base_dir_for_save,"sub_songs.pkl"),"rb"))
@@ -764,6 +763,7 @@ class PoemMatchSong(MatchSeggedPoemSong):
         '''
         self.shows = []
         for one_prose_dict in self.segged_poems:
+            print("one_prose_dict = ",one_prose_dict)
             songs_used = set()
             '''
             one_prose_dict 中包含多个seg，每个seg会对应召回很多首歌曲。一个one_prose_dict即一个节目，一个节目中，有同样名字的歌曲是不合适的。
@@ -845,11 +845,14 @@ class PoemMatchSong(MatchSeggedPoemSong):
         print("PoemMatchSong.forward():len(self.segged_poems) = ", len(self.segged_poems))
         self.segged_poems.sort(key=lambda poem: poem['match_score_with_topic'], reverse=True)
         print(self.segged_poems[0])
-        exit(89)
         self.ExtractKeyWordForSeg()
+        print("EKWFS finished!")
         self.findBestSongsForThisProse()
+        print("fBSFTP finished!")
         self.WriteToFile()
+        print("WTF finished")
         self.WriteToTxt()
+        print("WTT finished")
 
 
 

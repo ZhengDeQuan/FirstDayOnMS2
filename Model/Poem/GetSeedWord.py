@@ -17,6 +17,7 @@ from jieba import analyse
 import re
 from Model.Poem.config import opt
 from tqdm import tqdm
+from Model.config import path_opt
 
 def write07Excel(path):
     wb = openpyxl.Workbook()
@@ -299,17 +300,23 @@ class GetSeedWord:
 
 
 if __name__ == "__main__":
-    projectPath = "FirstDayOnMS2"
-    path = os.path.abspath(os.getcwd())
-    path = path.split(projectPath)
-    path = os.path.join(path[0],projectPath)
-    print("path  = ",path)
-    seedGetter = GetSeedWord(seed_word_path=os.path.join(path,"Model\\Poem\\seed_love.xlsx"),
-                             prose_path=os.path.join(path,"Data\\Poem\\processed_poem_2019.json"),
-                             proseSelcted=os.path.join(path,"Model\\Poem\\seed_love_story.xlsx"),
+    # projectPath = "FirstDayOnMS2"
+    # path = os.path.abspath(os.getcwd())
+    # path = path.split(projectPath)
+    # path = os.path.join(path[0],projectPath)
+    # print("path  = ",path)
+    # seedGetter = GetSeedWord(seed_word_path=os.path.join(path,"Model\\Poem\\seed_love.xlsx"),
+    #                          prose_path=os.path.join(path,"Data\\Poem\\processed_poem_2019.json"),
+    #                          proseSelcted=os.path.join(path,"Model\\Poem\\seed_love_story.xlsx"),
+    #                          ExtractMode="tfidf",
+    #                          idf_path="../idf.txt",
+    #                          max_iter_num=1)
+    # seedGetter.forward()
+    seedGetter = GetSeedWord(seed_word_path=path_opt['path_for_original_seed_word'],
+                             prose_path=path_opt['path_to_cleaned_poem'],
+                             proseSelcted=path_opt['path_for_save_selected_prose_by_seed_word'],
                              ExtractMode="tfidf",
-                             idf_path="../idf.txt",
+                             idf_path=path_opt['idf_path'],
                              max_iter_num=1)
     seedGetter.forward()
-
 
